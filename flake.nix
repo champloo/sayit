@@ -15,11 +15,10 @@
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (
       system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        pkgs = nixpkgs.legacyPackages.${system};
 
-        whisper = pkgs.whisper-cpp.override { cudaSupport = true; };
         deps = [
-          whisper
+          (pkgs.whisper-cpp.override { cudaSupport = true; })
           pkgs.wtype
           pkgs.ffmpeg
         ];
