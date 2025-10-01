@@ -30,17 +30,19 @@
           };
         };
     in
-    flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (
+    {
+      overlays.default = overlay;
+    }
+    // flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-
+        withOverlay = pkgs.extend overlay;
       in
       {
-        overlays.default = overlay;
-        packages.sayit = (pkgs.extend overlay).sayit;
+        packages.sayit = withOverlay.sayit;
 
-        packages.default = self.packages.${system}.sayit;
+        packages.default = withOverlay.sayit;
 
         apps.default = {
           type = "app";
