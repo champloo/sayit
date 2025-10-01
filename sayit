@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+QUIT_FILE=/tmp/sayit.quit
+
+if [[ ! -f "$QUIT_FILE" ]]; then
+  cleanup() {
+    rm -f "$QUIT_FILE" || true
+  }
+  trap cleanup EXIT
+
+  : > "$QUIT_FILE"
+
+  GGML_MODEL_PATH=${GGML_MODEL_PATH:-$HOME/.local/share/whisper/ggml-small.en.bin}
+
+  txt="$(ffmpeg -hide_banner -loglevel -8 -f pulse -i default -f wav -ac 1 -ar 16000 pipe:1 < "$QUIT_FILE" \
+    | whisper-cli -m "$GGML_MODEL_PATH" -np -otxt -sns -f - 2>/dev/null \
+    | tr '\n' ' ' | sed -e 's/^\s*//' -e 's/\s\s*$//')"
+  
+  rm -f "$QUIT_FILE"
+  printf %s "$txt" | wtype -
+else
+  printf %s q > "$QUIT_FILE"
+fi
