@@ -12,23 +12,34 @@
       nixpkgs,
       flake-utils,
     }:
+    let
+      overlay =
+        final: prev:
+        let
+          deps = [
+            (final.whisper-cpp.override { cudaSupport = true; })
+            final.wtype
+            final.ffmpeg
+          ];
+        in
+        {
+          sayit = final.writeShellApplication {
+            name = "sayit";
+            runtimeInputs = deps;
+            text = builtins.readFile ./sayit;
+          };
+        };
+    in
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        deps = [
-          (pkgs.whisper-cpp.override { cudaSupport = true; })
-          pkgs.wtype
-          pkgs.ffmpeg
-        ];
       in
       {
-        packages.sayit = pkgs.writeShellApplication {
-          name = "sayit";
-          runtimeInputs = deps;
-          text = builtins.readFile ./sayit;
-        };
+        overlays.default = overlay;
+        packages.sayit = (pkgs.extend overlay).sayit;
+
         packages.default = self.packages.${system}.sayit;
 
         apps.default = {
@@ -36,7 +47,7 @@
           program = "${self.packages.${system}.sayit}/bin/sayit";
         };
         devShells.default = pkgs.mkShell {
-          packages = [ self.packages.${system}.sayit ] ++ deps;
+          packages = [ self.packages.${system}.sayit ] ++ overlay.deps;
         };
       }
     );
