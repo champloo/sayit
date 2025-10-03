@@ -13,22 +13,19 @@
       flake-utils,
     }:
     let
-      overlay =
-        final: prev:
-        let
-          deps = [
-            (final.whisper-cpp.override { cudaSupport = true; })
-            final.wtype
-            final.ffmpeg
-          ];
-        in
-        {
-          sayit = final.writeShellApplication {
-            name = "sayit";
-            runtimeInputs = deps;
-            text = builtins.readFile ./sayit;
-          };
+      depsFor = pkgs: [
+        (pkgs.whisper-cpp.override { cudaSupport = true; })
+        pkgs.wtype
+        pkgs.ffmpeg
+      ];
+
+      overlay = final: prev: {
+        sayit = final.writeShellApplication {
+          name = "sayit";
+          runtimeInputs = depsFor final;
+          text = builtins.readFile ./sayit;
         };
+      };
     in
     {
       overlays.default = overlay;
@@ -49,7 +46,7 @@
           program = "${self.packages.${system}.sayit}/bin/sayit";
         };
         devShells.default = pkgs.mkShell {
-          packages = [ self.packages.${system}.sayit ] ++ overlay.deps;
+          packages = [ withOverlay.sayit ] ++ depsFor pkgs;
         };
       }
     );
