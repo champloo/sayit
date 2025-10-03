@@ -11,10 +11,32 @@ if [[ ! -f "$QUIT_FILE" ]]; then
 
   : > "$QUIT_FILE"
 
-  GGML_MODEL_PATH=${GGML_MODEL_PATH:-$HOME/.local/share/whisper/ggml-small.en.bin}
+  MODEL_NAME=${WHISPER_MODEL:-small.en}
+  MODELS_DIR=${XDG_DATA_HOME:-$HOME/.local/share}/whisper
+  MODEL_PATH="$MODELS_DIR/ggml-$MODEL_NAME.bin"
+
+  # Download model if it doesn't exist
+  if [[ ! -f "$MODEL_PATH" ]]; then
+    echo "Model not found at $MODEL_PATH, downloading..." >&2
+    mkdir -p "$MODELS_DIR"
+
+    if ! command -v whisper-cpp-download-ggml-model >/dev/null 2>&1; then
+      echo "Error: whisper-cpp-download-ggml-model not found. Please ensure whisper.cpp is properly installed." >&2
+      exit 1
+    fi
+
+    # Download the model to the
+    whisper-cpp-download-ggml-model "$MODEL_NAME" "$MODELS_DIR"
+
+    if [[ ! -f "$MODEL_PATH" ]]; then
+      echo "Error: Failed to download model" >&2
+      exit 1
+    fi
+    echo "Model downloaded successfully" >&2
+  fi
 
   txt="$(ffmpeg -hide_banner -loglevel -8 -f pulse -i default -f wav -ac 1 -ar 16000 pipe:1 < "$QUIT_FILE" \
-    | whisper-cli -m "$GGML_MODEL_PATH" -np -otxt -sns -f - 2>/dev/null \
+    | whisper-cli -m "$MODEL_PATH" -np -otxt -sns -f - 2>/dev/null \
     | tr '\n' ' ' | sed -e 's/^\s*//' -e 's/\s\s*$//')"
   
   rm -f "$QUIT_FILE"
