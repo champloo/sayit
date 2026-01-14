@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+RETURN_RESULT=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -r|--return)
+      RETURN_RESULT=true
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      echo "Usage: sayit [-r|--return]" >&2
+      exit 1
+      ;;
+  esac
+done
+
 QUIT_FILE=/tmp/sayit.quit
 
 if [[ ! -f "$QUIT_FILE" ]]; then
@@ -40,7 +55,11 @@ if [[ ! -f "$QUIT_FILE" ]]; then
     | tr '\n' ' ' | sed -e 's/^\s*//' -e 's/\s\s*$//')"
   
   rm -f "$QUIT_FILE"
-  printf %s "$txt" | wtype -
+  if [[ "$RETURN_RESULT" == true ]]; then
+    printf %s "$txt"
+  else
+    printf %s "$txt" | wtype -
+  fi
 else
   printf %s q > "$QUIT_FILE"
 fi
