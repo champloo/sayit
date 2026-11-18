@@ -13,18 +13,12 @@
       flake-utils,
     }:
     let
-      depsFor = pkgs: [
-        (pkgs.whisper-cpp.override { cudaSupport = true; })
-        pkgs.wtype
-        pkgs.ffmpeg
-      ];
-
       overlay = final: prev: {
-        sayit = final.writeShellApplication {
-          name = "sayit";
-          runtimeInputs = depsFor final;
-          text = builtins.readFile ./sayit;
-        };
+        sayit = final.callPackage ./package.nix { };
+        sayit-cpu = final.sayit.override { acceleration = false; };
+        sayit-cuda = final.sayit.override { acceleration = "cuda"; };
+        sayit-rocm = final.sayit.override { acceleration = "rocm"; };
+        sayit-vulkan = final.sayit.override { acceleration = "vulkan"; };
       };
     in
     {
@@ -37,16 +31,23 @@
         withOverlay = pkgs.extend overlay;
       in
       {
-        packages.sayit = withOverlay.sayit;
-
-        packages.default = withOverlay.sayit;
+        packages = {
+          inherit (withOverlay)
+            sayit
+            sayit-cpu
+            sayit-cuda
+            sayit-rocm
+            sayit-vulkan
+            ;
+          default = withOverlay.sayit;
+        };
 
         apps.default = {
           type = "app";
           program = "${self.packages.${system}.sayit}/bin/sayit";
         };
         devShells.default = pkgs.mkShell {
-          packages = [ withOverlay.sayit ] ++ depsFor pkgs;
+          packages = [ withOverlay.sayit ] ++ withOverlay.sayit.runtimeInputs;
         };
       }
     );
